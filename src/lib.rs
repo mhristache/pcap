@@ -306,9 +306,19 @@ unsafe impl Activated for Dead {}
 /// may or may not have particular capabilities. This trait is implemented by phantom
 /// types which allows us to punt these invariants to the type system to avoid runtime
 /// errors.
-pub unsafe trait State {}
+pub unsafe trait State {
+  type Metadata;
+}
 
-unsafe impl State for Inactive {}
+#[derive(Default)]
+struct StateMetadata {
+    immediate_mode_enabled: bool,
+}
+
+unsafe impl State for Inactive {
+  type Metadata = StateMetadata;
+}
+
 unsafe impl State for Active {}
 unsafe impl State for Offline {}
 unsafe impl State for Dead {}
@@ -346,7 +356,8 @@ unsafe impl State for Dead {}
 /// ```
 pub struct Capture<T: State + ?Sized> {
     handle: Unique<raw::pcap_t>,
-    _marker: PhantomData<T>
+    _marker: PhantomData<T>,
+    metadata: T::Metadata,
 }
 
 impl Capture<Offline> {
