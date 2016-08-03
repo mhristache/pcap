@@ -311,7 +311,7 @@ pub unsafe trait State {
 }
 
 #[derive(Default)]
-struct StateMetadata {
+pub struct StateMetadata {
     immediate_mode_enabled: bool,
 }
 
@@ -319,9 +319,15 @@ unsafe impl State for Inactive {
   type Metadata = StateMetadata;
 }
 
-unsafe impl State for Active {}
-unsafe impl State for Offline {}
-unsafe impl State for Dead {}
+unsafe impl State for Active {
+  type Metadata = StateMetadata;
+}
+unsafe impl State for Offline {
+  type Metadata = StateMetadata;
+}
+unsafe impl State for Dead {
+  type Metadata = StateMetadata;
+}
 
 /// This is a pcap capture handle which is an abstraction over the `pcap_t` provided by pcap.
 /// There are many ways to instantiate and interact with a pcap handle, so phantom types are
@@ -374,7 +380,8 @@ impl Capture<Offline> {
 
             Ok(Capture {
                 handle: Unique::new(handle),
-                _marker: PhantomData
+                _marker: PhantomData,
+                metadata: Default::default(),
             })
         }
     }
@@ -396,7 +403,8 @@ impl Capture<Offline> {
 
             Ok(Capture {
                 handle: Unique::new(handle),
-                _marker: PhantomData
+                _marker: PhantomData,
+                metadata: Default::default(),
             })
         }
     }
@@ -432,7 +440,8 @@ impl Capture<Inactive> {
 
             Ok(Capture {
                 handle: Unique::new(handle),
-                _marker: PhantomData
+                _marker: PhantomData,
+                metadata: Default::default(),
             })
         }
     }
@@ -816,7 +825,8 @@ impl Capture<Dead> {
 
             Ok(Capture {
                 handle: Unique::new(handle),
-                _marker: PhantomData
+                _marker: PhantomData,
+                metadata: Default::default(),
             })
         }
     }
@@ -848,8 +858,8 @@ impl<T: State + ?Sized> Drop for Capture<T> {
     }
 }
 
-impl<T: Activated> From<Capture<T>> for Capture<Activated> {
-    fn from(cap: Capture<T>) -> Capture<Activated> {
+impl<T> From<Capture<T>> for Capture<Activated<Metadata=T::Metadata>> where T: Activated + State<Metadata=StateMetadata> {
+    fn from(cap: Capture<T>) -> Capture<Activated<Metadata=T::Metadata>> {
         unsafe { transmute(cap) }
     }
 }
